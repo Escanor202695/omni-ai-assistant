@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MessageSquare, User, Clock } from 'lucide-react';
+import { MessageSquare, User, Clock, Phone } from 'lucide-react';
+import { VoiceCallDialog } from '@/components/VoiceCallDialog';
 
 interface Conversation {
   id: string;
@@ -17,6 +18,7 @@ interface Conversation {
 export default function ConversationsPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showVoiceDialog, setShowVoiceDialog] = useState(false);
 
   useEffect(() => {
     fetch('/api/conversations')
@@ -35,6 +37,10 @@ export default function ConversationsPage() {
           <h1 className="text-3xl font-bold text-gray-900">Conversations</h1>
           <p className="text-gray-500 mt-1">Manage customer conversations</p>
         </div>
+        <Button onClick={() => setShowVoiceDialog(true)} className="bg-blue-600 hover:bg-blue-700">
+          <Phone className="mr-2 h-4 w-4" />
+          Simulate Incoming Call
+        </Button>
       </div>
 
       {loading ? (
@@ -81,6 +87,8 @@ export default function ConversationsPage() {
           ))}
         </div>
       )}
+
+      <VoiceCallDialog open={showVoiceDialog} onOpenChange={setShowVoiceDialog} />
     </div>
   );
 }
