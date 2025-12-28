@@ -29,17 +29,25 @@ export default function RegisterPage() {
         body: JSON.stringify(formData),
       });
 
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch (jsonError) {
+        throw new Error('Failed to parse server response');
+      }
 
       if (!res.ok) {
-        throw new Error(data.error || 'Registration failed');
+        const errorMessage = data.message || data.error || 'Registration failed';
+        throw new Error(errorMessage);
       }
 
       toast.success('Account created successfully!');
       router.push('/dashboard');
       router.refresh();
     } catch (error: any) {
-      toast.error(error.message);
+      console.error('Registration error:', error);
+      const errorMessage = error.message || 'Registration failed. Please check your connection and try again.';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
