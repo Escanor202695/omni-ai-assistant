@@ -25,8 +25,8 @@ export const createCustomerSchema = z.object({
 export const listCustomersSchema = z.object({
   page: z.string().transform(Number).pipe(z.number().min(1)),
   limit: z.string().transform(Number).pipe(z.number().min(1).max(100)),
-  search: z.string().optional(),
-  tags: z.string().optional(),
+  search: z.string().nullable().transform(val => val || undefined).optional(),
+  tags: z.string().nullable().transform(val => val || undefined).optional(),
 });
 
 // Conversation schemas

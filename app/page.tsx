@@ -1,13 +1,8 @@
-import { getServerSession } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
-export default async function HomePage() {
-  const session = await getServerSession();
-  
-  if (session) {
-    redirect('/dashboard');
-  } else {
-    redirect('/login');
-  }
+export default function HomePage() {
+  // Middleware handles auth redirects
+  // Just redirect to login - authenticated users will be sent to dashboard by middleware
+  redirect('/login');
 }
 

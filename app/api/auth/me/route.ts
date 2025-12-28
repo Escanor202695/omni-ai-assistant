@@ -10,7 +10,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const business = await BusinessService.getById(session.businessId);
+    // Super admin doesn't have a business
+    const business = session.businessId 
+      ? await BusinessService.getById(session.businessId)
+      : null;
 
     return NextResponse.json({
       user: {

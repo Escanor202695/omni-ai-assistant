@@ -29,17 +29,32 @@ export async function middleware(request: NextRequest) {
   const isAuthPage = request.nextUrl.pathname.startsWith('/login') ||
                      request.nextUrl.pathname.startsWith('/register');
 
-  const isDashboard = request.nextUrl.pathname.startsWith('/') &&
-                      !isAuthPage &&
-                      !request.nextUrl.pathname.startsWith('/api') &&
-                      request.nextUrl.pathname !== '/';
+  // All dashboard routes (including those in (dashboard) folder)
+  const isProtectedRoute = request.nextUrl.pathname.startsWith('/dashboard') ||
+                           request.nextUrl.pathname.startsWith('/admin') ||
+                           request.nextUrl.pathname.startsWith('/conversations') ||
+                           request.nextUrl.pathname.startsWith('/customers') ||
+                           request.nextUrl.pathname.startsWith('/appointments') ||
+                           request.nextUrl.pathname.startsWith('/knowledge') ||
+                           request.nextUrl.pathname.startsWith('/analytics') ||
+                           request.nextUrl.pathname.startsWith('/settings');
 
-  // Redirect to login if not authenticated
-  if (!session && isDashboard) {
+  // Public routes - no auth required
+  const isPublicRoute = request.nextUrl.pathname.startsWith('/api/webhooks') ||
+                        request.nextUrl.pathname.startsWith('/api/chat/public') ||
+                        request.nextUrl.pathname.startsWith('/api/auth') ||
+                        request.nextUrl.pathname === '/';
+
+  if (isPublicRoute) {
+    return response;
+  }
+
+  // Redirect to login if not authenticated and trying to access protected routes
+  if (!session && isProtectedRoute) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // Redirect to dashboard if already authenticated
+  // Redirect authenticated users away from auth pages
   if (session && isAuthPage) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }

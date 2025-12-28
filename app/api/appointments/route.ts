@@ -2,12 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from '@/lib/supabase/server';
 import { AppointmentService } from '@/services/appointment.service';
 import { createAppointmentSchema } from '@/lib/validations';
+import { UserRole } from '@prisma/client';
 
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Super admins don't have a business - redirect them to admin
+    if (session.role === UserRole.SUPER_ADMIN || !session.businessId) {
+      return NextResponse.json({ error: 'Super admins cannot access business-specific routes' }, { status: 403 });
     }
 
     const { searchParams } = new URL(req.url);
@@ -32,6 +38,11 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Super admins don't have a business - redirect them to admin
+    if (session.role === UserRole.SUPER_ADMIN || !session.businessId) {
+      return NextResponse.json({ error: 'Super admins cannot access business-specific routes' }, { status: 403 });
     }
 
     const body = await req.json();

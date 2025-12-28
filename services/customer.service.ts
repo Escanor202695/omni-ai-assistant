@@ -110,4 +110,64 @@ export class CustomerService {
       },
     });
   }
+
+  /**
+   * Find or create customer by channel-specific identifier
+   * Used for Meta integrations (WhatsApp, Instagram, Facebook)
+   */
+  static async findOrCreateByChannel(
+    businessId: string,
+    channel: 'WHATSAPP' | 'INSTAGRAM' | 'FACEBOOK',
+    platformSenderId: string,
+    options?: { phone?: string; name?: string; email?: string }
+  ) {
+    // Build where clause based on channel
+    const channelIdField = channel === 'WHATSAPP' ? 'whatsappId' 
+      : channel === 'INSTAGRAM' ? 'instagramId' 
+      : 'facebookId';
+
+    // Try to find by channel ID first
+    let customer = await db.customer.findFirst({
+      where: {
+        businessId,
+        [channelIdField]: platformSenderId,
+      },
+    });
+
+    // If not found by channel ID, try phone number (for cross-channel linking)
+    if (!customer && options?.phone) {
+      customer = await db.customer.findFirst({
+        where: {
+          businessId,
+          phone: options.phone,
+        },
+      });
+
+      // If found by phone, update with new channel ID
+      if (customer) {
+        customer = await db.customer.update({
+          where: { id: customer.id },
+          data: { [channelIdField]: platformSenderId },
+        });
+      }
+    }
+
+    // Create new customer if not found
+    if (!customer) {
+      const createData: any = {
+        businessId,
+        [channelIdField]: platformSenderId,
+      };
+      
+      if (options?.phone) createData.phone = options.phone;
+      if (options?.name) createData.name = options.name;
+      if (options?.email) createData.email = options.email;
+
+      customer = await db.customer.create({
+        data: createData,
+      });
+    }
+
+    return customer;
+  }
 }

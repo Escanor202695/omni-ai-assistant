@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { BusinessService } from './business.service';
-import { Industry } from '@prisma/client';
+import { Industry, UserRole } from '@prisma/client';
 
 export interface RegisterData {
   email: string;
@@ -24,7 +24,7 @@ export class AuthService {
         supabaseUserId,
         email: data.email,
         businessId: business.id,
-        role: 'owner',
+        role: UserRole.BUSINESS_OWNER,
       },
     });
 

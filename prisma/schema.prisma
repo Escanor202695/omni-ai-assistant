@@ -10,6 +10,21 @@ datasource db {
 
 // ==================== ENUMS ====================
 
+enum UserRole {
+  SUPER_ADMIN
+  BUSINESS_OWNER
+  TEAM_MEMBER
+}
+
+enum IntegrationType {
+  WHATSAPP
+  INSTAGRAM
+  FACEBOOK
+  VAPI
+  GOOGLE_CALENDAR
+  EMAIL
+}
+
 enum Industry {
   MEDSPA
   SALON
@@ -38,6 +53,8 @@ enum Channel {
   WEBCHAT
   VOICE
   WHATSAPP
+  INSTAGRAM
+  FACEBOOK
   SMS
   EMAIL
 }
@@ -123,12 +140,17 @@ model Business {
   monthlyVoiceMinutes Int                 @default(0)
   usageResetAt        DateTime?
   
+  // Usage Limits
+  messagesLimit       Int                 @default(1000)
+  voiceMinutesLimit   Float               @default(100)
+  
   // Onboarding
   onboardingStep      Int                 @default(0)
   onboardingCompleted Boolean             @default(false)
   
   // Relations
   users               User[]
+  integrations        Integration[]
   customers           Customer[]
   conversations       Conversation[]
   appointments        Appointment[]
@@ -146,14 +168,14 @@ model User {
   email         String    @unique
   name          String?
   avatarUrl     String?
-  role          String    @default("owner")
+  role          UserRole  @default(BUSINESS_OWNER)
   
   // Supabase Auth link
   supabaseUserId String   @unique
   
-  // Business relation
-  businessId    String
-  business      Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  // Business relation (nullable for SUPER_ADMIN)
+  businessId    String?
+  business      Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
   
   @@index([businessId])
   @@index([supabaseUserId])
@@ -174,6 +196,8 @@ model Customer {
   
   // Channel identifiers
   whatsappId      String?
+  instagramId     String?
+  facebookId      String?
   webchatSessionId String?
   
   // Profile
@@ -193,6 +217,8 @@ model Customer {
   @@unique([businessId, phone])
   @@unique([businessId, email])
   @@unique([businessId, whatsappId])
+  @@unique([businessId, instagramId])
+  @@unique([businessId, facebookId])
   @@index([businessId])
 }
 
@@ -352,4 +378,51 @@ model KnowledgeDoc {
   
   @@index([businessId])
   @@index([docType])
+}
+
+model Integration {
+  id            String          @id @default(cuid())
+  businessId    String
+  business      Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  
+  type          IntegrationType
+  isActive      Boolean         @default(true)
+  
+  // Encrypted OAuth tokens
+  accessToken   String          // Encrypted
+  refreshToken  String?         // Encrypted
+  tokenExpiry   DateTime?
+  
+  // Platform identifiers
+  platformId    String          // WhatsApp phone_number_id, Instagram page_id, Vapi assistant_id, etc.
+  platformName  String?         // Display name: "Main WhatsApp", "Business Instagram"
+  
+  // Platform-specific metadata
+  metadata      Json            @default("{}")
+  // WhatsApp: { "phoneNumber": "+1234567890", "wabaId": "..." }
+  // Instagram: { "username": "...", "pageId": "..." }
+  // Vapi: { "assistantId": "...", "phoneNumber": "+1..." }
+  // Google Calendar: { "calendarId": "primary", "email": "..." }
+  
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@unique([businessId, type, platformId])
+  @@index([businessId])
+  @@index([platformId])
+  @@index([type, platformId])
+}
+
+model WebhookLog {
+  id            String    @id @default(cuid())
+  source        String    // "meta", "vapi", "stripe"
+  event         String    // "message", "call_ended", "payment_success", etc.
+  payload       Json
+  processed     Boolean   @default(false)
+  error         String?
+  
+  createdAt     DateTime  @default(now())
+
+  @@index([source, createdAt])
+  @@index([processed])
 }

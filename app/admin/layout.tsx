@@ -1,40 +1,50 @@
-import { getServerSession } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
-import Link from 'next/link';
-import { MessageSquare, Users, Calendar, BookOpen, BarChart3, Settings, Building2, Shield } from 'lucide-react';
-import { UserRole } from '@prisma/client';
+import { getServerSession } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import {
+  MessageSquare,
+  Users,
+  Calendar,
+  BookOpen,
+  BarChart3,
+  Settings,
+  Building2,
+  Shield,
+} from "lucide-react";
+import { UserRole } from "@prisma/client";
 
-export default async function DashboardLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const session = await getServerSession();
-  
+
   if (!session) {
-    redirect('/login');
+    redirect("/login");
   }
 
-  const isSuperAdmin = session.role === UserRole.SUPER_ADMIN;
-
-  const businessNavItems = [
-    { href: '/dashboard', label: 'Overview', icon: BarChart3 },
-    { href: '/conversations', label: 'Conversations', icon: MessageSquare },
-    { href: '/customers', label: 'Customers', icon: Users },
-    { href: '/appointments', label: 'Appointments', icon: Calendar },
-    { href: '/knowledge', label: 'Knowledge', icon: BookOpen },
-    { href: '/settings', label: 'Settings', icon: Settings },
-  ];
+  // Only super admins can access admin routes
+  if (session.role !== UserRole.SUPER_ADMIN) {
+    redirect("/dashboard");
+  }
 
   const adminNavItems = [
-    { href: '/admin', label: 'Admin Dashboard', icon: Shield },
-    { href: '/admin/businesses', label: 'Businesses', icon: Building2 },
-    { href: '/admin/users', label: 'Users', icon: Users },
+    { href: "/admin", label: "Admin Dashboard", icon: Shield },
+    { href: "/admin/businesses", label: "Businesses", icon: Building2 },
+    { href: "/admin/users", label: "Users", icon: Users },
   ];
 
-  const navItems = isSuperAdmin 
-    ? [...adminNavItems, ...businessNavItems]
-    : businessNavItems;
+  const businessNavItems = [
+    { href: "/dashboard", label: "Overview", icon: BarChart3 },
+    { href: "/conversations", label: "Conversations", icon: MessageSquare },
+    { href: "/customers", label: "Customers", icon: Users },
+    { href: "/appointments", label: "Appointments", icon: Calendar },
+    { href: "/knowledge", label: "Knowledge", icon: BookOpen },
+    { href: "/settings", label: "Settings", icon: Settings },
+  ];
+
+  const navItems = [...adminNavItems, ...businessNavItems];
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -66,14 +76,12 @@ export default async function DashboardLayout({
         <header className="bg-white border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-900">
-              {isSuperAdmin ? 'Admin Dashboard' : 'Dashboard'}
+              Admin Dashboard
             </h2>
             <div className="flex items-center gap-4">
-              {isSuperAdmin && (
-                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
-                  Super Admin
-                </span>
-              )}
+              <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
+                Super Admin
+              </span>
               <span className="text-sm text-gray-600">{session.email}</span>
               <Link
                 href="/api/auth/logout"
@@ -84,9 +92,7 @@ export default async function DashboardLayout({
             </div>
           </div>
         </header>
-        <main className="flex-1 overflow-auto p-6">
-          {children}
-        </main>
+        <main className="flex-1 overflow-auto p-6">{children}</main>
       </div>
     </div>
   );
