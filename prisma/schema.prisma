@@ -1,0 +1,355 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ==================== ENUMS ====================
+
+enum Industry {
+  MEDSPA
+  SALON
+  DENTAL
+  FITNESS
+  HEALTHCARE
+  HOME_SERVICES
+  OTHER
+}
+
+enum SubscriptionTier {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+enum Channel {
+  WEBCHAT
+  VOICE
+  WHATSAPP
+  SMS
+  EMAIL
+}
+
+enum ConversationStatus {
+  ACTIVE
+  RESOLVED
+  ESCALATED
+  ABANDONED
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+  HUMAN
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELED
+  NO_SHOW
+}
+
+enum KnowledgeDocType {
+  FAQ
+  SERVICE
+  POLICY
+  WEBSITE
+  DOCUMENT
+}
+
+// ==================== MODELS ====================
+
+model Business {
+  id                  String              @id @default(cuid())
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  
+  // Basic Info
+  name                String
+  slug                String              @unique
+  industry            Industry            @default(OTHER)
+  timezone            String              @default("America/New_York")
+  phone               String?
+  email               String?
+  address             String?
+  website             String?
+  logoUrl             String?
+  
+  // Business Hours: { monday: { open: "09:00", close: "17:00" }, ... }
+  businessHours       Json?
+  
+  // AI Configuration
+  aiPersonality       String              @default("professional")
+  aiGreeting          String?
+  aiInstructions      String?             @db.Text
+  
+  // Channel Config (Phase 2)
+  vapiAssistantId     String?
+  vapiPhoneNumber     String?
+  whatsappPhoneId     String?
+  webchatEnabled      Boolean             @default(true)
+  
+  // Google Calendar
+  googleAccessToken   String?
+  googleRefreshToken  String?
+  googleCalendarId    String?
+  bookingBuffer       Int                 @default(15)
+  bookingAdvanceDays  Int                 @default(30)
+  
+  // Billing
+  stripeCustomerId    String?             @unique
+  stripeSubscriptionId String?
+  subscriptionTier    SubscriptionTier    @default(FREE)
+  subscriptionStatus  SubscriptionStatus  @default(TRIALING)
+  trialEndsAt         DateTime?
+  
+  // Usage Tracking (reset monthly)
+  monthlyInteractions Int                 @default(0)
+  monthlyVoiceMinutes Int                 @default(0)
+  usageResetAt        DateTime?
+  
+  // Onboarding
+  onboardingStep      Int                 @default(0)
+  onboardingCompleted Boolean             @default(false)
+  
+  // Relations
+  users               User[]
+  customers           Customer[]
+  conversations       Conversation[]
+  appointments        Appointment[]
+  services            Service[]
+  knowledgeDocs       KnowledgeDoc[]
+  
+  @@index([stripeCustomerId])
+}
+
+model User {
+  id            String    @id @default(cuid())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  email         String    @unique
+  name          String?
+  avatarUrl     String?
+  role          String    @default("owner")
+  
+  // Supabase Auth link
+  supabaseUserId String   @unique
+  
+  // Business relation
+  businessId    String
+  business      Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  
+  @@index([businessId])
+  @@index([supabaseUserId])
+}
+
+model Customer {
+  id              String          @id @default(cuid())
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  businessId      String
+  business        Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  
+  // Identity
+  phone           String?
+  email           String?
+  name            String?
+  
+  // Channel identifiers
+  whatsappId      String?
+  webchatSessionId String?
+  
+  // Profile
+  avatarUrl       String?
+  tags            String[]        @default([])
+  notes           String?         @db.Text
+  metadata        Json?
+  
+  // Stats
+  visitCount      Int             @default(0)
+  lastContactAt   DateTime?
+  
+  // Relations
+  conversations   Conversation[]
+  appointments    Appointment[]
+  
+  @@unique([businessId, phone])
+  @@unique([businessId, email])
+  @@unique([businessId, whatsappId])
+  @@index([businessId])
+}
+
+model Conversation {
+  id              String              @id @default(cuid())
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  
+  businessId      String
+  business        Business            @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  
+  customerId      String
+  customer        Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  
+  channel         Channel             @default(WEBCHAT)
+  status          ConversationStatus  @default(ACTIVE)
+  
+  // AI Analysis
+  intent          String?
+  summary         String?
+  sentiment       String?
+  
+  // Human Handoff
+  assignedUserId  String?
+  escalatedAt     DateTime?
+  escalateReason  String?
+  resolvedAt      DateTime?
+  
+  // Session
+  metadata        Json?
+  
+  // Relations
+  messages        Message[]
+  appointments    Appointment[]
+  
+  @@index([businessId])
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Message {
+  id              String       @id @default(cuid())
+  createdAt       DateTime     @default(now())
+  
+  conversationId  String
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  role            MessageRole
+  content         String       @db.Text
+  
+  // For tool calls
+  toolCalls       Json?
+  toolResults     Json?
+  
+  // Metadata
+  tokenCount      Int?
+  latencyMs       Int?
+  model           String?
+  
+  @@index([conversationId])
+  @@index([createdAt])
+}
+
+model Appointment {
+  id              String            @id @default(cuid())
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  
+  businessId      String
+  business        Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  
+  customerId      String
+  customer        Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  
+  conversationId  String?
+  conversation    Conversation?     @relation(fields: [conversationId], references: [id])
+  
+  serviceId       String?
+  service         Service?          @relation(fields: [serviceId], references: [id])
+  
+  serviceName     String
+  
+  // Scheduling
+  startTime       DateTime
+  endTime         DateTime
+  duration        Int               // minutes
+  timezone        String
+  status          AppointmentStatus @default(SCHEDULED)
+  provider        String?
+  
+  // Calendar Sync
+  googleEventId   String?
+  
+  // Notes
+  notes           String?
+  internalNotes   String?
+  
+  // Reminders
+  reminder24hSent Boolean           @default(false)
+  reminder2hSent  Boolean           @default(false)
+  
+  @@index([businessId])
+  @@index([customerId])
+  @@index([startTime])
+  @@index([status])
+}
+
+model Service {
+  id            String        @id @default(cuid())
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  
+  businessId    String
+  business      Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  
+  name          String
+  description   String?
+  category      String?
+  duration      Int           // minutes
+  price         Decimal?      @db.Decimal(10, 2)
+  priceType     String        @default("fixed")
+  isBookable    Boolean       @default(true)
+  isActive      Boolean       @default(true)
+  sortOrder     Int           @default(0)
+  
+  appointments  Appointment[]
+  
+  @@index([businessId])
+}
+
+model KnowledgeDoc {
+  id              String            @id @default(cuid())
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  
+  businessId      String
+  business        Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  
+  title           String
+  content         String            @db.Text
+  docType         KnowledgeDocType
+  
+  // Source
+  sourceUrl       String?
+  fileUrl         String?
+  fileName        String?
+  
+  // Vector storage (Pinecone)
+  vectorIds       String[]          @default([])
+  chunkCount      Int               @default(0)
+  
+  // Processing status
+  isProcessed     Boolean           @default(false)
+  processedAt     DateTime?
+  processingError String?
+  
+  @@index([businessId])
+  @@index([docType])
+}
