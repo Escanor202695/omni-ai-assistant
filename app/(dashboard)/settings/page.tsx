@@ -6,19 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Settings, Save, Building, Bot, Clock } from 'lucide-react';
 import { toast } from 'sonner';
-
-interface Business {
-  id: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  address: string | null;
-  website: string | null;
-  timezone: string;
-  aiPersonality: string;
-  aiGreeting: string | null;
-  aiInstructions: string | null;
-}
+import { Business } from '@/types';
 
 export default function SettingsPage() {
   const [business, setBusiness] = useState<Business | null>(null);
@@ -46,12 +34,18 @@ export default function SettingsPage() {
         body: JSON.stringify(business),
       });
       
+      const data = await res.json();
+      
       if (res.ok) {
         toast.success('Settings saved!');
+        // Update local state with saved data
+        setBusiness(data.business);
       } else {
-        toast.error('Failed to save settings');
+        console.error('Save failed:', data);
+        toast.error(data.error || 'Failed to save settings');
       }
-    } catch {
+    } catch (error) {
+      console.error('Save error:', error);
       toast.error('Failed to save settings');
     } finally {
       setSaving(false);
@@ -167,6 +161,24 @@ export default function SettingsPage() {
                 placeholder="Add any specific instructions for your AI assistant..."
                 value={business.aiInstructions || ''} 
                 onChange={(e) => setBusiness({ ...business, aiInstructions: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Services Offered</label>
+              <textarea 
+                className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="e.g., Haircuts ($30), Massage ($80), Facials ($60)\nDescribe your services and pricing for the AI to reference"
+                value={business.servicesOffered || ''} 
+                onChange={(e) => setBusiness({ ...business, servicesOffered: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Business Hours</label>
+              <textarea 
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="e.g., Mon-Fri 9AM-6PM, Sat 10AM-4PM, Closed Sunday"
+                value={business.businessHoursText || ''} 
+                onChange={(e) => setBusiness({ ...business, businessHoursText: e.target.value })}
               />
             </div>
           </CardContent>

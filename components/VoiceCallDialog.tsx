@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Phone, PhoneOff, Loader2 } from 'lucide-react';
 import Vapi from '@vapi-ai/web';
+import { Business } from '@/types';
 
 interface VoiceCallDialogProps {
   open: boolean;
@@ -24,6 +25,28 @@ export function VoiceCallDialog({ open, onOpenChange }: VoiceCallDialogProps) {
   const [callStatus, setCallStatus] = useState<'idle' | 'connecting' | 'active' | 'ended'>('idle');
   const [transcript, setTranscript] = useState<Array<{ role: string; message: string }>>([]);
   const vapiRef = useRef<Vapi | null>(null);
+
+  const [business, setBusiness] = useState<Business | null>(null);
+    const [loading, setLoading] = useState(true);
+  
+    useEffect(() => {
+      fetch('/api/auth/me')
+        .then(res => res.json())
+        .then(data => {
+          setBusiness(data.business);
+          setLoading(false);
+        })
+        .catch(() => setLoading(false));
+    }, []);
+
+    // Pre-fill business context fields when business data is available
+    useEffect(() => {
+      if (business) {
+        setBusinessServices(business.servicesOffered || '');
+        setBusinessHours(business.businessHoursText || '');
+        setAgentInstructions(business.aiInstructions || '');
+      }
+    }, [business]);
 
   useEffect(() => {
     // Initialize Vapi with public key
@@ -86,6 +109,12 @@ export function VoiceCallDialog({ open, onOpenChange }: VoiceCallDialogProps) {
           businessServices,
           businessHours,
           agentInstructions,
+          businessName: business?.name,
+          aiPersonality: business?.aiPersonality,
+          aiGreeting: business?.aiGreeting,
+          aiInstructions: business?.aiInstructions,
+          servicesOffered: business?.servicesOffered,
+          businessHoursText: business?.businessHoursText,
         }),
       });
 
