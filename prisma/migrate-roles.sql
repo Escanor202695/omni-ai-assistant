@@ -10,3 +10,4 @@ UPDATE "User" SET role = 'BUSINESS_OWNER' WHERE role = 'owner';
 -- Verify update (optional)
 SELECT id, email, role FROM "User";
 
+

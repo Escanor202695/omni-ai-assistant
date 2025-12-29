@@ -1,7 +1,7 @@
 import { getServerSession } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { MessageSquare, Users, Calendar, BookOpen, BarChart3, Settings, Building2, Shield } from 'lucide-react';
+import { MessageSquare, Users, Calendar, BookOpen, BarChart3, Settings, Building2, Shield, Plug, Bot, Clock } from 'lucide-react';
 import { UserRole } from '@prisma/client';
 
 export default async function DashboardLayout({
@@ -23,6 +23,9 @@ export default async function DashboardLayout({
     { href: '/customers', label: 'Customers', icon: Users },
     { href: '/appointments', label: 'Appointments', icon: Calendar },
     { href: '/knowledge', label: 'Knowledge', icon: BookOpen },
+    { href: '/settings/ai', label: 'AI Agent', icon: Bot },
+    { href: '/settings/hours', label: 'Hours', icon: Clock },
+    { href: '/integrations', label: 'Integrations', icon: Plug },
     { href: '/settings', label: 'Settings', icon: Settings },
   ];
 

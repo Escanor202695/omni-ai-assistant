@@ -16,8 +16,17 @@ export class AIService {
   static async chat(params: ChatParams) {
     const { business, customer, conversation, messages, userMessage } = params;
 
-    // 1. Get relevant knowledge
-    const context = await RAGService.search(business.id, userMessage);
+    console.log('[AIService] Starting chat for business:', business.id);
+    
+    // 1. Get relevant knowledge (skip for now, embeddings not working)
+    let context = '';
+    try {
+      console.log('[AIService] Attempting RAG search...');
+      context = await RAGService.search(business.id, userMessage);
+      console.log('[AIService] RAG search completed, context length:', context.length);
+    } catch (error) {
+      console.log('[AIService] RAG search failed, continuing without context:', error instanceof Error ? error.message : 'Unknown');
+    }
 
     // 2. Build system prompt
     const systemPrompt = this.buildSystemPrompt(business, customer, context);
@@ -26,6 +35,7 @@ export class AIService {
     const chatMessages = this.formatMessages(messages, userMessage, systemPrompt);
 
     // 4. Call LLM
+    console.log('[AIService] Calling OpenRouter with model:', MODELS.PRIMARY);
     const startTime = Date.now();
     const response = await openrouter.chat.completions.create({
       model: MODELS.PRIMARY,
@@ -35,6 +45,7 @@ export class AIService {
       temperature: 0.7,
       max_tokens: 1000,
     });
+    console.log('[AIService] OpenRouter response received');
     
     const latencyMs = Date.now() - startTime;
     const choice = response.choices[0];

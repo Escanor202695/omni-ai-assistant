@@ -5,7 +5,7 @@ import { MetaWebhookPayload, MetaMessage } from '@/types';
 import { CustomerService } from '@/services/customer.service';
 import { ConversationService } from '@/services/conversation.service';
 import { AIService } from '@/services/ai.service';
-import { sendWhatsAppMessage, sendInstagramMessage, verifyWebhookSignature } from '@/lib/integrations/meta';
+import { sendWhatsAppMessage, sendInstagramMessage, sendFacebookMessage, verifyWebhookSignature } from '@/lib/integrations/meta';
 import { Channel, MessageRole } from '@prisma/client';
 
 /**
@@ -161,11 +161,12 @@ async function handleInstagramMessage(
   messageId: string
 ) {
   try {
+    // Try both INSTAGRAM and FACEBOOK types (Meta uses same format for both)
     const integration = await db.integration.findFirst({
       where: {
-        type: 'INSTAGRAM',
         platformId: pageId,
         isActive: true,
+        type: { in: ['INSTAGRAM', 'FACEBOOK'] },
       },
       include: { business: true },
     });
@@ -174,23 +175,38 @@ async function handleInstagramMessage(
       console.error(`No integration found for page_id: ${pageId}`);
       return;
     }
+    
+    // Determine actual channel based on integration type
+    const channel = integration.type === 'INSTAGRAM' ? 'INSTAGRAM' : 'FACEBOOK';
+
+    // Use the correct send function based on channel
+    const sendResponse = async (response: string) => {
+      const accessToken = decrypt(integration.accessToken);
+      if (channel === 'FACEBOOK') {
+        await sendFacebookMessage({
+          accessToken,
+          pageId,
+          recipientId: senderId,
+          text: response,
+        });
+      } else {
+        await sendInstagramMessage({
+          accessToken,
+          recipientId: senderId,
+          text: response,
+          pageId,
+        });
+      }
+    };
 
     await handleMessage({
       businessId: integration.businessId,
       business: integration.business,
       integration,
-      channel: 'INSTAGRAM',
+      channel, // Use detected channel
       platformSenderId: senderId,
       text,
-      platformMessageId: messageId,
-      sendResponse: async (response: string) => {
-        await sendInstagramMessage({
-          accessToken: decrypt(integration.accessToken),
-          recipientId: senderId,
-          text: response,
-          pageId,
-        });
-      },
+      sendResponse,
     });
   } catch (error) {
     console.error('Error handling Instagram message:', error);
@@ -207,7 +223,6 @@ async function handleMessage(params: {
   channel: Channel;
   platformSenderId: string;
   text: string;
-  platformMessageId: string;
   sendResponse: (response: string) => Promise<void>;
 }) {
   const {
@@ -216,7 +231,6 @@ async function handleMessage(params: {
     channel,
     platformSenderId,
     text,
-    platformMessageId,
     sendResponse,
   } = params;
 
@@ -224,7 +238,7 @@ async function handleMessage(params: {
     // 1. Find or create customer
     const customer = await CustomerService.findOrCreateByChannel(
       businessId,
-      channel as 'WHATSAPP' | 'INSTAGRAM',
+      channel as 'WHATSAPP' | 'INSTAGRAM' | 'FACEBOOK',
       platformSenderId,
       {
         phone: channel === 'WHATSAPP' ? platformSenderId : undefined,
@@ -242,10 +256,7 @@ async function handleMessage(params: {
     await ConversationService.addMessage(
       conversation.id,
       MessageRole.USER,
-      text,
-      {
-        platformMessageId,
-      }
+      text
     );
 
     // 4. Get conversation messages for context
@@ -259,6 +270,7 @@ async function handleMessage(params: {
     }
 
     // 5. Process with AI
+    console.log('[Webhook] Calling AI service...');
     const aiResponse = await AIService.chat({
       business,
       customer,
@@ -266,6 +278,7 @@ async function handleMessage(params: {
       messages: conversationWithMessages.messages || [],
       userMessage: text,
     });
+    console.log('[Webhook] AI response received:', aiResponse.content?.substring(0, 100));
 
     // 6. Save AI response
     await ConversationService.addMessage(

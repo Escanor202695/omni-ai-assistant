@@ -1,20 +1,31 @@
 import { pineconeIndex } from '@/lib/pinecone';
 import OpenAI from 'openai';
 
+// Use OpenAI directly for embeddings (OpenRouter doesn't support embeddings well)
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export class RAGService {
   static async search(businessId: string, query: string, topK = 5): Promise<string> {
     try {
       // 1. Generate embedding for query
-      const embedding = await this.getEmbedding(query);
+      const embedding = await Promise.race([
+        this.getEmbedding(query),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Embedding timeout')), 5000)
+        )
+      ]);
       
-      // 2. Query Pinecone
-      const results = await pineconeIndex.namespace(businessId).query({
-        vector: embedding,
-        topK,
-        includeMetadata: true,
-      });
+      // 2. Query Pinecone with timeout
+      const results = await Promise.race([
+        pineconeIndex.namespace(businessId).query({
+          vector: embedding,
+          topK,
+          includeMetadata: true,
+        }),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Pinecone timeout')), 3000)
+        )
+      ]);
       
       // 3. Format results as context
       if (!results.matches?.length) return '';
@@ -24,7 +35,7 @@ export class RAGService {
         .filter(Boolean)
         .join('\n\n');
     } catch (error) {
-      console.error('[RAGService] Search error:', error);
+      console.log('[RAGService] Search failed (continuing without RAG):', error instanceof Error ? error.message : 'Unknown error');
       return '';
     }
   }
