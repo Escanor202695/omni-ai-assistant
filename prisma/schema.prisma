@@ -109,6 +109,10 @@ model Business {
   
   // Business Hours: { monday: { open: "09:00", close: "17:00" }, ... }
   businessHours       Json?
+  businessHoursText   String?             @db.Text  // Human-readable format for AI
+  
+  // Services offered (for AI context)
+  servicesOffered     String?             @db.Text
   
   // AI Configuration
   aiPersonality       String              @default("professional")
@@ -214,8 +218,6 @@ model Customer {
   conversations   Conversation[]
   appointments    Appointment[]
   
-  @@unique([businessId, phone])
-  @@unique([businessId, email])
   @@unique([businessId, whatsappId])
   @@unique([businessId, instagramId])
   @@unique([businessId, facebookId])

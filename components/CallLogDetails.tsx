@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -46,13 +46,7 @@ export function CallLogDetails({ callId, open, onOpenChange }: CallLogDetailsPro
   const [callDetails, setCallDetails] = useState<CallDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (callId && open) {
-      fetchCallDetails();
-    }
-  }, [callId, open]);
-
-  const fetchCallDetails = async () => {
+  const fetchCallDetails = useCallback(async () => {
     if (!callId) return;
 
     setLoading(true);
@@ -73,7 +67,13 @@ export function CallLogDetails({ callId, open, onOpenChange }: CallLogDetailsPro
     } finally {
       setLoading(false);
     }
-  };
+  }, [callId]);
+
+  useEffect(() => {
+    if (callId && open) {
+      fetchCallDetails();
+    }
+  }, [callId, open, fetchCallDetails]);
 
   const formatDuration = (seconds?: number) => {
     if (!seconds) return 'N/A';

@@ -12,58 +12,57 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
+    const businessId = searchParams.get('businessId');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
-    const search = searchParams.get('search') || '';
-    const industry = searchParams.get('industry') || '';
-    const status = searchParams.get('status') || '';
+    const status = searchParams.get('status');
+
+    if (!businessId) {
+      return NextResponse.json({ error: 'businessId is required' }, { status: 400 });
+    }
 
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: any = {};
-
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-        { slug: { contains: search, mode: 'insensitive' } },
-      ];
-    }
-
-    if (industry) {
-      where.industry = industry;
-    }
+    const where: any = {
+      businessId,
+    };
 
     if (status) {
-      where.subscriptionStatus = status;
+      where.status = status;
     }
 
-    // Get businesses with pagination
-    const [businesses, total] = await Promise.all([
-      db.business.findMany({
+    // Get appointments with pagination
+    const [appointments, total] = await Promise.all([
+      db.appointment.findMany({
         where,
         include: {
-          _count: {
+          customer: {
             select: {
-              users: true,
-              customers: true,
-              conversations: true,
-              integrations: true,
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+            },
+          },
+          service: {
+            select: {
+              id: true,
+              name: true,
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { startTime: 'desc' },
         skip,
         take: limit,
       }),
-      db.business.count({ where }),
+      db.appointment.count({ where }),
     ]);
 
     const totalPages = Math.ceil(total / limit);
 
     return NextResponse.json({
-      data: businesses,
+      data: appointments,
       meta: {
         page,
         limit,
@@ -72,8 +71,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error fetching businesses:', error);
+    console.error('Error fetching appointments:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
-

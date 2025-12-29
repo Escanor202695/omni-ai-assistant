@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Building2, Search, Plus, Edit, Trash2, ExternalLink } from 'lucide-react';
+import { Building2, Search, Plus, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 interface Business {
   id: string;
@@ -27,6 +28,7 @@ interface Business {
 }
 
 export default function AdminBusinessesPage() {
+  const router = useRouter();
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -36,7 +38,7 @@ export default function AdminBusinessesPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
 
-  const fetchBusinesses = async () => {
+  const fetchBusinesses = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -59,11 +61,11 @@ export default function AdminBusinessesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, search, industryFilter, statusFilter]);
 
   useEffect(() => {
     fetchBusinesses();
-  }, [page, search, industryFilter, statusFilter]);
+  }, [fetchBusinesses]);
 
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
@@ -175,7 +177,7 @@ export default function AdminBusinessesPage() {
         <>
           <div className="grid gap-4">
             {businesses.map((business) => (
-              <Card key={business.id} className="hover:shadow-md transition-shadow">
+              <Card key={business.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => router.push(`/admin/businesses/${business.id}`)}>
                 <CardContent className="py-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4 flex-1">
@@ -224,16 +226,13 @@ export default function AdminBusinessesPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Link href={`/admin/businesses/${business.id}`}>
-                        <Button variant="outline" size="sm">
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </Button>
-                      </Link>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleDelete(business.id, business.name)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(business.id, business.name);
+                        }}
                         className="text-red-600 hover:text-red-700 hover:border-red-300"
                       >
                         <Trash2 className="h-4 w-4" />

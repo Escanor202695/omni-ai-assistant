@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Users, Plus, Mail, Phone, Search } from 'lucide-react';
+import { Users, Plus, Mail, Phone, Search, Trash2 } from 'lucide-react';
+import { ConfirmationModal } from '@/components/ConfirmationModal';
 
 interface Customer {
   id: string;
@@ -20,12 +21,21 @@ export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    customerId: string | null;
+    customerName: string | null;
+  }>({
+    isOpen: false,
+    customerId: null,
+    customerName: null,
+  });
 
   useEffect(() => {
     fetch('/api/customers?page=1&limit=50')
       .then(res => res.json())
       .then(data => {
-        setCustomers(data.customers || []);
+        setCustomers(data.data || []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -36,6 +46,33 @@ export default function CustomersPage() {
     c.email?.toLowerCase().includes(search.toLowerCase()) ||
     c.phone?.includes(search)
   );
+
+  const handleDeleteClick = (customerId: string, customerName: string | null) => {
+    setDeleteModal({
+      isOpen: true,
+      customerId,
+      customerName,
+    });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteModal.customerId) return;
+
+    try {
+      const response = await fetch(`/api/customers?id=${deleteModal.customerId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setCustomers(customers.filter(c => c.id !== deleteModal.customerId));
+      } else {
+        alert('Failed to delete customer');
+      }
+    } catch (error) {
+      console.error('Error deleting customer:', error);
+      alert('Failed to delete customer');
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -107,6 +144,17 @@ export default function CustomersPage() {
                       </span>
                     ))}
                     <span className="text-gray-400 text-sm">{customer.visitCount} visits</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteClick(customer.id, customer.name);
+                      }}
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -114,6 +162,14 @@ export default function CustomersPage() {
           ))}
         </div>
       )}
+      <ConfirmationModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, customerId: null, customerName: null })}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Customer"
+        description={`Are you sure you want to delete "${deleteModal.customerName || 'this customer'}"? This action cannot be undone.`}
+        confirmText="Delete"
+      />
     </div>
   );
 }

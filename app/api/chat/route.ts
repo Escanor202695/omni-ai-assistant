@@ -85,9 +85,9 @@ export async function POST(req: NextRequest) {
       'ASSISTANT',
       aiResponse.content,
       {
-        tokenCount: aiResponse.tokenCount,
+        tokenCount: 'tokenCount' in aiResponse ? aiResponse.tokenCount : undefined,
         latencyMs: aiResponse.latencyMs,
-        model: aiResponse.model,
+        model: 'model' in aiResponse ? aiResponse.model : undefined,
       }
     );
 
@@ -99,9 +99,9 @@ export async function POST(req: NextRequest) {
       conversationId: conversation.id,
       customerId: customer?.id,
       metadata: {
-        tokenCount: aiResponse.tokenCount,
+        tokenCount: 'tokenCount' in aiResponse ? aiResponse.tokenCount : undefined,
         latencyMs: aiResponse.latencyMs,
-        model: aiResponse.model,
+        model: 'model' in aiResponse ? aiResponse.model : undefined,
       },
     });
   } catch (error: any) {

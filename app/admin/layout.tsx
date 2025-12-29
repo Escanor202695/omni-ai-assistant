@@ -35,16 +35,7 @@ export default async function AdminLayout({
     { href: "/admin/users", label: "Users", icon: Users },
   ];
 
-  const businessNavItems = [
-    { href: "/dashboard", label: "Overview", icon: BarChart3 },
-    { href: "/conversations", label: "Conversations", icon: MessageSquare },
-    { href: "/customers", label: "Customers", icon: Users },
-    { href: "/appointments", label: "Appointments", icon: Calendar },
-    { href: "/knowledge", label: "Knowledge", icon: BookOpen },
-    { href: "/settings", label: "Settings", icon: Settings },
-  ];
-
-  const navItems = [...adminNavItems, ...businessNavItems];
+  const navItems = [...adminNavItems];
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -69,6 +60,12 @@ export default async function AdminLayout({
             );
           })}
         </nav>
+              <Link
+                href="/api/auth/logout"
+                className="w-full text-center py-2 bg-red-100 text-sm text-red-500 hover:bg-red-200 hover:text-red-700"
+              >
+                Logout
+              </Link>
       </aside>
 
       {/* Main content */}
@@ -83,12 +80,6 @@ export default async function AdminLayout({
                 Super Admin
               </span>
               <span className="text-sm text-gray-600">{session.email}</span>
-              <Link
-                href="/api/auth/logout"
-                className="text-sm text-gray-500 hover:text-gray-700"
-              >
-                Logout
-              </Link>
             </div>
           </div>
         </header>

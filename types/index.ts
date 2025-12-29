@@ -48,6 +48,22 @@ export interface Session {
   role: string;
 }
 
+export interface Business {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  website: string | null;
+  timezone: string;
+  businessHoursText: string | null;
+  servicesOffered: string | null;
+  aiPersonality: string;
+  aiGreeting: string | null;
+  aiInstructions: string | null;
+  vapiAssistantId: string | null;
+}
+
 // ============== META WEBHOOK TYPES ==============
 
 export interface MetaWebhookPayload {

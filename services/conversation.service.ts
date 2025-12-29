@@ -69,7 +69,7 @@ export class ConversationService {
     conversationId: string, 
     role: MessageRole, 
     content: string, 
-    metadata?: { tokenCount?: number; latencyMs?: number; model?: string; toolCalls?: any; toolResults?: any }
+    metadata?: { tokenCount?: number; latencyMs?: number; model?: string; toolCalls?: any; toolResults?: any; platformMessageId?: string }
   ) {
     const message = await db.message.create({
       data: {

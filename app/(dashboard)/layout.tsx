@@ -1,8 +1,22 @@
-import { getServerSession } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
-import Link from 'next/link';
-import { MessageSquare, Users, Calendar, BookOpen, BarChart3, Settings, Building2, Shield, Plug, Bot, Clock } from 'lucide-react';
-import { UserRole } from '@prisma/client';
+import { getServerSession } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import {
+  MessageSquare,
+  Users,
+  Calendar,
+  BookOpen,
+  BarChart3,
+  Settings,
+  Building2,
+  Shield,
+  Plug,
+  Bot,
+  Clock,
+} from "lucide-react";
+import { UserRole } from "@prisma/client";
+import { NavigationGuard } from "@/components/NavigationGuard";
+import { BusinessService } from "@/services/business.service";
 
 export default async function DashboardLayout({
   children,
@@ -10,32 +24,38 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const session = await getServerSession();
-  
+
   if (!session) {
-    redirect('/login');
+    redirect("/login");
   }
 
   const isSuperAdmin = session.role === UserRole.SUPER_ADMIN;
 
+  // Get business data for navigation guard
+  const business =
+    !isSuperAdmin && session.businessId
+      ? await BusinessService.getById(session.businessId)
+      : null;
+
   const businessNavItems = [
-    { href: '/dashboard', label: 'Overview', icon: BarChart3 },
-    { href: '/conversations', label: 'Conversations', icon: MessageSquare },
-    { href: '/customers', label: 'Customers', icon: Users },
-    { href: '/appointments', label: 'Appointments', icon: Calendar },
-    { href: '/knowledge', label: 'Knowledge', icon: BookOpen },
-    { href: '/settings/ai', label: 'AI Agent', icon: Bot },
-    { href: '/settings/hours', label: 'Hours', icon: Clock },
-    { href: '/integrations', label: 'Integrations', icon: Plug },
-    { href: '/settings', label: 'Settings', icon: Settings },
+    { href: "/dashboard", label: "Overview", icon: BarChart3 },
+    { href: "/conversations", label: "Conversations", icon: MessageSquare },
+    { href: "/customers", label: "Customers", icon: Users },
+    { href: "/appointments", label: "Appointments", icon: Calendar },
+    { href: "/knowledge", label: "Knowledge", icon: BookOpen },
+    { href: "/settings/ai", label: "AI Agent", icon: Bot },
+    { href: "/settings/hours", label: "Hours", icon: Clock },
+    { href: "/integrations", label: "Integrations", icon: Plug },
+    { href: "/settings", label: "Settings", icon: Settings },
   ];
 
   const adminNavItems = [
-    { href: '/admin', label: 'Admin Dashboard', icon: Shield },
-    { href: '/admin/businesses', label: 'Businesses', icon: Building2 },
-    { href: '/admin/users', label: 'Users', icon: Users },
+    { href: "/admin", label: "Admin Dashboard", icon: Shield },
+    { href: "/admin/businesses", label: "Businesses", icon: Building2 },
+    { href: "/admin/users", label: "Users", icon: Users },
   ];
 
-  const navItems = isSuperAdmin 
+  const navItems = isSuperAdmin
     ? [...adminNavItems, ...businessNavItems]
     : businessNavItems;
 
@@ -62,6 +82,13 @@ export default async function DashboardLayout({
             );
           })}
         </nav>
+
+        <Link
+          href="/api/auth/logout"
+          className="w-full text-center py-2 bg-red-100 text-sm text-red-500 hover:bg-red-200 hover:text-red-700"
+        >
+          Logout
+        </Link>
       </aside>
 
       {/* Main content */}
@@ -69,7 +96,7 @@ export default async function DashboardLayout({
         <header className="bg-white border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-900">
-              {isSuperAdmin ? 'Admin Dashboard' : 'Dashboard'}
+              {isSuperAdmin ? "Admin Dashboard" : "Dashboard"}
             </h2>
             <div className="flex items-center gap-4">
               {isSuperAdmin && (
@@ -77,17 +104,17 @@ export default async function DashboardLayout({
                   Super Admin
                 </span>
               )}
-              <span className="text-sm text-gray-600">{session.email}</span>
-              <Link
-                href="/api/auth/logout"
-                className="text-sm text-gray-500 hover:text-gray-700"
-              >
-                Logout
-              </Link>
+              <div className="text-right">
+                <p className="text-sm font-medium text-gray-900">
+                  +1 (948) 300 9718
+                </p>
+                <p className="text-sm text-gray-600">{session.email}</p>
+              </div>
             </div>
           </div>
         </header>
         <main className="flex-1 overflow-auto p-6">
+          <NavigationGuard business={business} />
           {children}
         </main>
       </div>

@@ -1,55 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from '@/lib/supabase/server';
-import { UserRole } from '@prisma/client';
 import { db } from '@/lib/db';
-import { z } from 'zod';
-
-const updateBusinessSchema = z.object({
-  name: z.string().min(1).optional(),
-  slug: z.string().min(1).regex(/^[a-z0-9-]+$/).optional(),
-  industry: z.enum(['MEDSPA', 'SALON', 'DENTAL', 'FITNESS', 'HEALTHCARE', 'HOME_SERVICES', 'OTHER']).optional(),
-  email: z.string().email().optional().nullable(),
-  phone: z.string().optional().nullable(),
-  website: z.string().url().optional().nullable(),
-  subscriptionTier: z.enum(['FREE', 'STARTER', 'PROFESSIONAL', 'ENTERPRISE']).optional(),
-  subscriptionStatus: z.enum(['TRIALING', 'ACTIVE', 'PAST_DUE', 'CANCELED']).optional(),
-  messagesLimit: z.number().int().positive().optional(),
-  voiceMinutesLimit: z.number().positive().optional(),
-});
+import { UserRole } from '@prisma/client';
 
 export async function GET(
-  req: NextRequest,
+  request: NextRequest,
   { params }: { params: { businessId: string } }
 ) {
   try {
     const session = await getServerSession();
-    
+
     if (!session || session.role !== UserRole.SUPER_ADMIN) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
+    const { businessId } = params;
+
+    if (!businessId) {
+      return NextResponse.json({ error: 'Business ID is required' }, { status: 400 });
+    }
+
+    // Get business with full details
     const business = await db.business.findUnique({
-      where: { id: params.businessId },
+      where: { id: businessId },
       include: {
-        _count: {
-          select: {
-            users: true,
-            customers: true,
-            conversations: true,
-            integrations: true,
-            appointments: true,
-            services: true,
-            knowledgeDocs: true,
-          },
-        },
         users: {
-          take: 10,
           select: {
             id: true,
             email: true,
             name: true,
             role: true,
             createdAt: true,
+          },
+        },
+        _count: {
+          select: {
+            users: true,
+            customers: true,
+            conversations: true,
+            appointments: true,
+            services: true,
+            knowledgeDocs: true,
           },
         },
       },
@@ -60,85 +51,98 @@ export async function GET(
     }
 
     return NextResponse.json(business);
-  } catch (error: any) {
-    console.error('[GET /api/admin/businesses/:id]', error);
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+  } catch (error) {
+    console.error('Error fetching business:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
 export async function PATCH(
-  req: NextRequest,
+  request: NextRequest,
   { params }: { params: { businessId: string } }
 ) {
   try {
     const session = await getServerSession();
-    
+
     if (!session || session.role !== UserRole.SUPER_ADMIN) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    const body = await req.json();
-    const data = updateBusinessSchema.parse(body);
+    const { businessId } = params;
+    const updates = await request.json();
 
-    // If slug is being updated, check for conflicts
-    if (data.slug) {
-      const existing = await db.business.findFirst({
-        where: {
-          slug: data.slug,
-          NOT: { id: params.businessId },
-        },
-      });
-
-      if (existing) {
-        return NextResponse.json({ error: 'Business with this slug already exists' }, { status: 400 });
-      }
+    if (!businessId) {
+      return NextResponse.json({ error: 'Business ID is required' }, { status: 400 });
     }
 
-    const business = await db.business.update({
-      where: { id: params.businessId },
-      data,
+    // Update business
+    const updatedBusiness = await db.business.update({
+      where: { id: businessId },
+      data: updates,
       include: {
+        users: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            role: true,
+            createdAt: true,
+          },
+        },
         _count: {
           select: {
             users: true,
             customers: true,
             conversations: true,
-            integrations: true,
+            appointments: true,
+            services: true,
+            knowledgeDocs: true,
           },
         },
       },
     });
 
-    return NextResponse.json(business);
-  } catch (error: any) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 });
-    }
-    console.error('[PATCH /api/admin/businesses/:id]', error);
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+    return NextResponse.json(updatedBusiness);
+  } catch (error) {
+    console.error('Error updating business:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
 export async function DELETE(
-  req: NextRequest,
+  request: NextRequest,
   { params }: { params: { businessId: string } }
 ) {
   try {
     const session = await getServerSession();
-    
+
     if (!session || session.role !== UserRole.SUPER_ADMIN) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    await db.business.delete({
-      where: { id: params.businessId },
+    const { businessId } = params;
+
+    if (!businessId) {
+      return NextResponse.json({ error: 'Business ID is required' }, { status: 400 });
+    }
+
+    // Check if business exists
+    const business = await db.business.findUnique({
+      where: { id: businessId },
     });
 
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error('[DELETE /api/admin/businesses/:id]', error);
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+    if (!business) {
+      return NextResponse.json({ error: 'Business not found' }, { status: 404 });
+    }
+
+    // Delete business (this will cascade delete related records due to Prisma schema)
+    await db.business.delete({
+      where: { id: businessId },
+    });
+
+    return NextResponse.json({ message: 'Business deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting business:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
-
-

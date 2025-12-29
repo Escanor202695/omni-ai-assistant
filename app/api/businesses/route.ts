@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from '@/lib/supabase/server';
 import { db } from '@/lib/db';
-import { UserRole } from '@prisma/client';
 
 /**
  * GET /api/businesses
@@ -52,7 +51,7 @@ export async function PATCH(req: NextRequest) {
 
     const body = await req.json();
 
-    // Only allow updating certain fields
+    // Only allow updating certain fields (combined from both versions)
     const allowedFields = [
       'name',
       'email',
@@ -65,15 +64,20 @@ export async function PATCH(req: NextRequest) {
       'aiGreeting',
       'aiInstructions',
       'businessHours',
+      'businessHoursText',    // From friend's version (for AI context)
+      'servicesOffered',      // From friend's version (for AI context)
       'bookingBuffer',
       'bookingAdvanceDays',
       'webchatEnabled',
+      'vapiAssistantId',      // For VAPI integration
+      'vapiPhoneNumber',      // For VAPI integration
     ];
 
     const updateData: Record<string, any> = {};
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
-        updateData[field] = body[field];
+        // Handle null values properly
+        updateData[field] = body[field] === '' ? null : body[field];
       }
     }
 
@@ -82,10 +86,18 @@ export async function PATCH(req: NextRequest) {
       data: updateData,
     });
 
-    return NextResponse.json(business);
+    return NextResponse.json({ 
+      success: true,
+      business 
+    });
   } catch (error: any) {
     console.error('[PATCH /api/businesses]', error);
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+    return NextResponse.json(
+      { 
+        error: 'Internal server error',
+        details: error.message 
+      },
+      { status: 500 }
+    );
   }
 }
-
