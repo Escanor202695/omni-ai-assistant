@@ -23,7 +23,7 @@ export default function AppointmentsPage() {
     fetch('/api/appointments')
       .then(res => res.json())
       .then(data => {
-        setAppointments(data.appointments || []);
+        setAppointments(data.data || []);
         setLoading(false);
       })
       .catch(() => setLoading(false));

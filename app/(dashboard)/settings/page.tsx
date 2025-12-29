@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Settings, Save, Building, Bot, Clock } from 'lucide-react';
+import { Settings, Save, Building, Bot, Clock, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 import { Business } from '@/types';
 
@@ -12,6 +12,7 @@ export default function SettingsPage() {
   const [business, setBusiness] = useState<Business | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [creatingAssistant, setCreatingAssistant] = useState(false);
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -49,6 +50,35 @@ export default function SettingsPage() {
       toast.error('Failed to save settings');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCreateAssistant = async () => {
+    setCreatingAssistant(true);
+    
+    try {
+      const res = await fetch('/api/vapi/create-assistant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        toast.success('Vapi assistant created successfully!');
+        // Refresh business data to get the new assistant ID
+        const meRes = await fetch('/api/auth/me');
+        const meData = await meRes.json();
+        setBusiness(meData.business);
+      } else {
+        console.error('Assistant creation failed:', data);
+        toast.error(data.error || 'Failed to create assistant');
+      }
+    } catch (error) {
+      console.error('Assistant creation error:', error);
+      toast.error('Failed to create assistant');
+    } finally {
+      setCreatingAssistant(false);
     }
   };
 
@@ -209,6 +239,43 @@ export default function SettingsPage() {
               <option value="Asia/Kolkata">India (IST)</option>
               <option value="Australia/Sydney">Sydney (Australia)</option>
             </select>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Phone className="h-5 w-5 mr-2" />
+              Voice Assistant
+            </CardTitle>
+            <CardDescription>Configure your Vapi voice assistant</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Assistant Status</p>
+                <p className="text-sm text-gray-500">
+                  {business.vapiAssistantId ? 'Configured' : 'Not configured'}
+                </p>
+                {business.vapiAssistantId && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    ID: {business.vapiAssistantId}
+                  </p>
+                )}
+              </div>
+              <Button 
+                onClick={handleCreateAssistant} 
+                disabled={creatingAssistant}
+                variant={business.vapiAssistantId ? "outline" : "default"}
+              >
+                <Phone className="h-4 w-4 mr-2" />
+                {creatingAssistant ? 'Creating...' : business.vapiAssistantId ? 'Update Assistant' : 'Create Assistant'}
+              </Button>
+            </div>
+            <p className="text-xs text-gray-500">
+              This creates a persistent Vapi assistant using your current AI configuration. 
+              The assistant will be used for all voice calls. If you update your settings, recreate the assistant to apply changes.
+            </p>
           </CardContent>
         </Card>
       </div>

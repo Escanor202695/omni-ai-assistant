@@ -268,17 +268,25 @@ async function handleMessage(params: {
     });
 
     // 6. Save AI response
+    const messageMetadata: any = {
+      latencyMs: aiResponse.latencyMs,
+    };
+
+    if ('tokenCount' in aiResponse) {
+      messageMetadata.tokenCount = aiResponse.tokenCount;
+      messageMetadata.model = aiResponse.model;
+    }
+
+    if ('toolCalls' in aiResponse) {
+      messageMetadata.toolCalls = aiResponse.toolCalls;
+      messageMetadata.toolResults = aiResponse.toolResults;
+    }
+
     await ConversationService.addMessage(
       conversation.id,
       MessageRole.ASSISTANT,
       aiResponse.content,
-      {
-        tokenCount: aiResponse.tokenCount,
-        latencyMs: aiResponse.latencyMs,
-        model: aiResponse.model,
-        toolCalls: aiResponse.toolCalls,
-        toolResults: aiResponse.toolResults,
-      }
+      messageMetadata
     );
 
     // 7. Format response for channel (shorter for WhatsApp/Instagram)

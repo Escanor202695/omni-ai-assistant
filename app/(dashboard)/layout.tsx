@@ -59,6 +59,13 @@ export default async function DashboardLayout({
             );
           })}
         </nav>
+
+              <Link
+                href="/api/auth/logout"
+                className="w-full text-center py-2 bg-red-100 text-sm text-red-500 hover:bg-red-200 hover:text-red-700"
+              >
+                Logout
+              </Link>
       </aside>
 
       {/* Main content */}
@@ -74,13 +81,10 @@ export default async function DashboardLayout({
                   Super Admin
                 </span>
               )}
-              <span className="text-sm text-gray-600">{session.email}</span>
-              <Link
-                href="/api/auth/logout"
-                className="text-sm text-gray-500 hover:text-gray-700"
-              >
-                Logout
-              </Link>
+              <div className='text-right'>
+              <p className="text-sm font-medium text-gray-900">+1 (948) 300 9718</p>
+              <p className="text-sm text-gray-600">{session.email}</p>
+              </div>
             </div>
           </div>
         </header>

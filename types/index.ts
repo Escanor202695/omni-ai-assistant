@@ -61,6 +61,7 @@ export interface Business {
   aiPersonality: string;
   aiGreeting: string | null;
   aiInstructions: string | null;
+  vapiAssistantId: string | null;
 }
 
 // ============== META WEBHOOK TYPES ==============

@@ -46,16 +46,22 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
+    console.log('[POST /api/appointments] Request body:', body);
+
     const data = createAppointmentSchema.parse(body);
+    console.log('[POST /api/appointments] Validated data:', data);
 
     const appointment = await AppointmentService.create(session.businessId, {
       ...data,
       startTime: new Date(data.startTime),
     });
 
+    console.log('[POST /api/appointments] Created appointment:', appointment);
     return NextResponse.json(appointment, { status: 201 });
   } catch (error: any) {
+    console.error('[POST /api/appointments] Error:', error);
     if (error.name === 'ZodError') {
+      console.error('[POST /api/appointments] Validation errors:', error.errors);
       return NextResponse.json({ error: 'Validation failed', details: error.errors }, { status: 400 });
     }
     console.error('[POST /api/appointments]', error);

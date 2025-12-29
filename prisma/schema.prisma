@@ -218,8 +218,6 @@ model Customer {
   conversations   Conversation[]
   appointments    Appointment[]
   
-  @@unique([businessId, phone])
-  @@unique([businessId, email])
   @@unique([businessId, whatsappId])
   @@unique([businessId, instagramId])
   @@unique([businessId, facebookId])

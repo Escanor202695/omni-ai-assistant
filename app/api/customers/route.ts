@@ -50,7 +50,9 @@ export async function POST(req: NextRequest) {
     const customer = await CustomerService.create(session.businessId, data);
     return NextResponse.json(customer, { status: 201 });
   } catch (error: any) {
+    console.error('[POST /api/customers] Error:', error);
     if (error.name === 'ZodError') {
+      console.error('[POST /api/customers] Validation errors:', error.errors);
       return NextResponse.json({ error: 'Validation failed', details: error.errors }, { status: 400 });
     }
     console.error('[POST /api/customers]', error);
