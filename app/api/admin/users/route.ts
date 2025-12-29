@@ -7,6 +7,7 @@ import { z } from 'zod';
 const updateUserSchema = z.object({
   role: z.enum(['SUPER_ADMIN', 'BUSINESS_OWNER', 'TEAM_MEMBER']).optional(),
   name: z.string().optional().nullable(),
+  userId: z.string().optional(),
 });
 
 export async function GET(req: NextRequest) {
