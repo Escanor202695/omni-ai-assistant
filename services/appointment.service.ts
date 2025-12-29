@@ -16,7 +16,7 @@ export class AppointmentService {
   static async list(businessId: string, params: {
     startDate?: Date;
     endDate?: Date;
-    status?: AppointmentStatus;
+    status?: AppointmentStatus[];
     page: number;
     limit: number;
   }) {
@@ -33,7 +33,7 @@ export class AppointmentService {
               lte: endDate,
             },
           }),
-          ...(status && { status }),
+          ...(status?.length && { status: { in: status } }),
         },
         include: {
           customer: true,
@@ -52,7 +52,7 @@ export class AppointmentService {
               lte: endDate,
             },
           }),
-          ...(status && { status }),
+          ...(status?.length && { status: { in: status } }),
         },
       }),
     ]);
@@ -163,5 +163,11 @@ export class AppointmentService {
     }
 
     return slots;
+  }
+
+  static async delete(businessId: string, id: string) {
+    return db.appointment.delete({
+      where: { id, businessId } as any,
+    });
   }
 }

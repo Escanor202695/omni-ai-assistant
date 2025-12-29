@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, Plus, Clock, User } from 'lucide-react';
+import { Calendar, Plus, Clock, User, Trash2 } from 'lucide-react';
+import { ConfirmationModal } from '@/components/ConfirmationModal';
 
 interface Appointment {
   id: string;
@@ -18,6 +19,15 @@ interface Appointment {
 export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    appointmentId: string | null;
+    serviceName: string | null;
+  }>({
+    isOpen: false,
+    appointmentId: null,
+    serviceName: null,
+  });
 
   useEffect(() => {
     fetch('/api/appointments')
@@ -35,6 +45,33 @@ export default function AppointmentsPage() {
     COMPLETED: 'bg-gray-100 text-gray-700',
     CANCELED: 'bg-red-100 text-red-700',
     NO_SHOW: 'bg-yellow-100 text-yellow-700',
+  };
+
+  const handleDeleteClick = (appointmentId: string, serviceName: string) => {
+    setDeleteModal({
+      isOpen: true,
+      appointmentId,
+      serviceName,
+    });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteModal.appointmentId) return;
+
+    try {
+      const response = await fetch(`/api/appointments?id=${deleteModal.appointmentId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setAppointments(appointments.filter(a => a.id !== deleteModal.appointmentId));
+      } else {
+        alert('Failed to delete appointment');
+      }
+    } catch (error) {
+      console.error('Error deleting appointment:', error);
+      alert('Failed to delete appointment');
+    }
   };
 
   return (
@@ -94,6 +131,17 @@ export default function AppointmentsPage() {
                     <span className={`px-2 py-1 rounded text-xs ${statusColors[apt.status] || 'bg-gray-100'}`}>
                       {apt.status}
                     </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteClick(apt.id, apt.serviceName);
+                      }}
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -101,6 +149,14 @@ export default function AppointmentsPage() {
           ))}
         </div>
       )}
+      <ConfirmationModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, appointmentId: null, serviceName: null })}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Appointment"
+        description={`Are you sure you want to delete the "${deleteModal.serviceName}" appointment? This action cannot be undone.`}
+        confirmText="Delete"
+      />
     </div>
   );
 }

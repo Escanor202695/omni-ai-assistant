@@ -22,7 +22,7 @@ export default async function DashboardLayout({
     { href: '/conversations', label: 'Conversations', icon: MessageSquare },
     { href: '/customers', label: 'Customers', icon: Users },
     { href: '/appointments', label: 'Appointments', icon: Calendar },
-    { href: '/knowledge', label: 'Knowledge', icon: BookOpen },
+    // { href: '/knowledge', label: 'Knowledge', icon: BookOpen },
     { href: '/settings', label: 'Settings', icon: Settings },
   ];
 
