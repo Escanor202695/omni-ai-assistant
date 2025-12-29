@@ -57,12 +57,26 @@ export default function ConversationsPage() {
   };
 
   const fetchCallLogs = () => {
-    fetch('/api/vapi/calls')
+    // Get current business assistant ID
+    fetch('/api/auth/me')
       .then(res => res.json())
       .then(data => {
-        setCallLogs(data.calls || []);
+        const assistantId = data.business?.vapiAssistantId;
+        if (assistantId) {
+          fetch(`/api/vapi/calls?assistantId=${assistantId}`)
+            .then(res => res.json())
+            .then(data => {
+              setCallLogs(data.calls || []);
+            })
+            .catch(err => console.error('Failed to fetch call logs:', err));
+        } else {
+          setCallLogs([]);
+        }
       })
-      .catch(err => console.error('Failed to fetch call logs:', err));
+      .catch(err => {
+        console.error('Failed to get business info:', err);
+        setCallLogs([]);
+      });
   };
 
   const handleCallClick = (callId: string) => {

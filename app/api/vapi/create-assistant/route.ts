@@ -61,6 +61,8 @@ Business Hours: ${business.businessHoursText || 'Not specified'}
 
 ${business.aiInstructions ? `Additional Instructions: ${business.aiInstructions}` : ''}
 
+IMPORTANT: Always start by asking for the customer's name and phone number. You must collect both pieces of information before proceeding with any appointment booking or other services. If a customer wants to book an appointment, first ensure you have their full name and phone number.
+
 When customers want to book appointments, use the book_appointment function. After calling the function, always tell the customer that their appointment has been successfully booked and provide the details. Do not mention any errors or issues with booking.`;
 
     // Use custom greeting if provided, otherwise use default
@@ -90,6 +92,18 @@ When customers want to book appointments, use the book_appointment function. Aft
             parameters: {
               type: 'object',
               properties: {
+                customerName: {
+                  type: 'string',
+                  description: 'The full name of the customer'
+                },
+                customerPhone: {
+                  type: 'string',
+                  description: 'The phone number of the customer'
+                },
+                customerEmail: {
+                  type: 'string',
+                  description: 'The email address of the customer (optional)'
+                },
                 serviceName: {
                   type: 'string',
                   description: 'The name of the service being booked'
@@ -108,7 +122,7 @@ When customers want to book appointments, use the book_appointment function. Aft
                   description: 'Any additional notes about the appointment'
                 }
               },
-              required: ['serviceName', 'startTime']
+              required: ['customerName', 'customerPhone', 'serviceName', 'startTime']
             }
           }
         ],
@@ -121,6 +135,18 @@ When customers want to book appointments, use the book_appointment function. Aft
               parameters: {
                 type: 'object',
                 properties: {
+                  customerName: {
+                    type: 'string',
+                    description: 'The full name of the customer'
+                  },
+                  customerPhone: {
+                    type: 'string',
+                    description: 'The phone number of the customer'
+                  },
+                  customerEmail: {
+                    type: 'string',
+                    description: 'The email address of the customer (optional)'
+                  },
                   serviceName: {
                     type: 'string',
                     description: 'The name of the service being booked'
@@ -139,7 +165,7 @@ When customers want to book appointments, use the book_appointment function. Aft
                     description: 'Any additional notes about the appointment'
                   }
                 },
-                required: ['serviceName', 'startTime']
+                required: ['customerName', 'customerPhone', 'serviceName', 'startTime']
               }
             }
           }

@@ -96,11 +96,6 @@ export function VoiceCallDialog({ open, onOpenChange }: VoiceCallDialogProps) {
   }, []);
 
   const startCall = async () => {
-    if (!customerName || !customerPhone) {
-      alert('Please fill in customer name and phone number');
-      return;
-    }
-
     if (!business?.vapiAssistantId) {
       alert('No Vapi assistant configured. Please create one in Settings first.');
       return;
@@ -130,21 +125,21 @@ export function VoiceCallDialog({ open, onOpenChange }: VoiceCallDialogProps) {
 
     try {
       // Validate appointment data
-      if (!appointmentData || !appointmentData.startTime) {
-        console.error('Invalid appointment data - missing startTime:', appointmentData);
-        alert('Invalid appointment data received - missing start time');
+      if (!appointmentData || !appointmentData.startTime || !appointmentData.customerName || !appointmentData.customerPhone) {
+        console.error('Invalid appointment data - missing required fields:', appointmentData);
+        alert('Invalid appointment data received - missing customer information or appointment time');
         return;
       }
 
       console.log('Creating customer...');
-      // Create a new customer for each appointment
+      // Create a new customer using data from the AI conversation
       let customerId = null;
       const customerData: any = {
-        name: customerName,
-        phone: customerPhone,
+        name: appointmentData.customerName,
+        phone: appointmentData.customerPhone,
       };
-      if (customerEmail) {
-        customerData.email = customerEmail;
+      if (appointmentData.customerEmail) {
+        customerData.email = appointmentData.customerEmail;
       }
       console.log('Customer data to create:', customerData);
 
@@ -187,10 +182,10 @@ export function VoiceCallDialog({ open, onOpenChange }: VoiceCallDialogProps) {
       // Create the appointment
       const appointmentPayload = {
         customerId,
-        serviceName: appointmentData.serviceName || appointmentType || 'General Appointment',
+        serviceName: appointmentData.serviceName || 'General Appointment',
         startTime,
         duration: appointmentData.duration || 60,
-        notes: appointmentData.notes || `Booked via voice call - ${customerName}`,
+        notes: appointmentData.notes || `Booked via voice call - ${appointmentData.customerName}`,
       };
       console.log('Appointment payload:', appointmentPayload);
 
@@ -251,7 +246,7 @@ export function VoiceCallDialog({ open, onOpenChange }: VoiceCallDialogProps) {
         <DialogHeader>
           <DialogTitle>Simulate Incoming Call</DialogTitle>
           <DialogDescription>
-            Fill in customer information and start a voice call with the AI agent.
+            Start a voice call with the AI agent. The assistant will collect customer information and handle appointment bookings automatically.
           </DialogDescription>
         </DialogHeader>
 
@@ -259,7 +254,7 @@ export function VoiceCallDialog({ open, onOpenChange }: VoiceCallDialogProps) {
           {callStatus === 'idle' && (
             <>
               <div className="space-y-2">
-                <Label htmlFor="name">Customer Name *</Label>
+                <Label htmlFor="name">Customer Name (Optional - AI will collect)</Label>
                 <Input
                   id="name"
                   placeholder="John Doe"
@@ -269,7 +264,7 @@ export function VoiceCallDialog({ open, onOpenChange }: VoiceCallDialogProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number *</Label>
+                <Label htmlFor="phone">Phone Number (Optional - AI will collect)</Label>
                 <Input
                   id="phone"
                   placeholder="+1234567890"
@@ -302,7 +297,7 @@ export function VoiceCallDialog({ open, onOpenChange }: VoiceCallDialogProps) {
               <Button
                 onClick={startCall}
                 className="w-full mt-4"
-                disabled={!customerName || !customerPhone || !business?.vapiAssistantId}
+                disabled={!business?.vapiAssistantId}
               >
                 <Phone className="mr-2 h-4 w-4" />
                 Start Call
@@ -311,6 +306,9 @@ export function VoiceCallDialog({ open, onOpenChange }: VoiceCallDialogProps) {
               {/* Test button for appointment booking */}
               <Button
                 onClick={() => handleAppointmentBooking({
+                  customerName: customerName || 'Test Customer',
+                  customerPhone: customerPhone || '+1234567890',
+                  customerEmail: customerEmail || 'test@example.com',
                   serviceName: 'Test Service',
                   startTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Tomorrow
                   duration: 60,
@@ -318,7 +316,6 @@ export function VoiceCallDialog({ open, onOpenChange }: VoiceCallDialogProps) {
                 })}
                 className="w-full mt-2"
                 variant="outline"
-                disabled={!customerName}
               >
                 Test Appointment Booking
               </Button>

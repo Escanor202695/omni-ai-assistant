@@ -25,7 +25,7 @@ export default function CustomersPage() {
     fetch('/api/customers?page=1&limit=50')
       .then(res => res.json())
       .then(data => {
-        setCustomers(data.customers || []);
+        setCustomers(data.data || []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
