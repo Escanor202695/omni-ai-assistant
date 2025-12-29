@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { MessageSquare, Users, Calendar, BookOpen, BarChart3, Settings, Building2, Shield } from 'lucide-react';
 import { UserRole } from '@prisma/client';
+import { NavigationGuard } from '@/components/NavigationGuard';
+import { BusinessService } from '@/services/business.service';
 
 export default async function DashboardLayout({
   children,
@@ -16,6 +18,11 @@ export default async function DashboardLayout({
   }
 
   const isSuperAdmin = session.role === UserRole.SUPER_ADMIN;
+
+  // Get business data for navigation guard
+  const business = !isSuperAdmin && session.businessId 
+    ? await BusinessService.getById(session.businessId)
+    : null;
 
   const businessNavItems = [
     { href: '/dashboard', label: 'Overview', icon: BarChart3 },
@@ -89,6 +96,7 @@ export default async function DashboardLayout({
           </div>
         </header>
         <main className="flex-1 overflow-auto p-6">
+          <NavigationGuard business={business} />
           {children}
         </main>
       </div>
